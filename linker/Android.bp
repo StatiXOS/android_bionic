@@ -202,8 +202,10 @@ cc_defaults {
         debuggable: {
             cppflags: ["-DUSE_LD_CONFIG_FILE"],
         },
-        target_shim_libs: {
-            cppflags: ["-DLD_SHIM_LIBS=\"%s\""],
+        statix: {
+            target_shim_libs: {
+                cppflags: ["-DLD_SHIM_LIBS=\"%s\""],
+            },
         },
     },
 
