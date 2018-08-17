@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 The Android Open Source Project
+ * Copyright (C) 2008 The Android Open Source Project
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,11 +26,10 @@
  * SUCH DAMAGE.
  */
 
-#ifndef _INADDR_H_
-#define _INADDR_H_
+// Prototype: void *memcpy (void *dst, const void *src, size_t count).
 
-#include <stdint.h>
+#include <private/bionic_asm.h>
 
-typedef uint32_t in_addr_t;
-
-#endif
+ENTRY(memcpy)
+  #include "memcpy_base.S"
+END(memcpy)
