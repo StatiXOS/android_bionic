@@ -790,9 +790,7 @@ static inline __always_inline bool IsMutexDestroyed(uint16_t mutex_state) {
 static int __attribute__((noinline)) HandleUsingDestroyedMutex(pthread_mutex_t* mutex,
                                                                const char* function_name) {
     if (bionic_get_application_target_sdk_version() >= __ANDROID_API_P__) {
-        (void)(mutex);
-        (void)(function_name);
-        // __fortify_fatal("%s called on a destroyed mutex (%p)", function_name, mutex);
+        __fortify_fatal("%s called on a destroyed mutex (%p)", function_name, mutex);
     }
     return EBUSY;
 }
