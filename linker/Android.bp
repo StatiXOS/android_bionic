@@ -54,6 +54,11 @@ cc_object {
 // linker default configuration
 // ========================================================
 
+soong_config_module_type_import {
+    from: "vendor/statix/build/soong/Android.bp",
+    module_types: ["target_shim_libs_defaults"],
+}
+
 // Configuration for the linker binary and any of its static libraries.
 cc_defaults {
     name: "linker_defaults",
@@ -87,14 +92,13 @@ cc_defaults {
         "-Werror",
     ],
 
+    defaults: [
+        "target_shim_libs",
+    ],
+
     product_variables: {
         debuggable: {
             cppflags: ["-DUSE_LD_CONFIG_FILE"],
-        },
-        statix: {
-            target_shim_libs: {
-                cppflags: ["-DLD_SHIM_LIBS=\"%s\""],
-            },
         },
     },
 
