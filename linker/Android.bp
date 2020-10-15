@@ -57,6 +57,7 @@ cc_object {
 // Configuration for the linker binary and any of its static libraries.
 cc_defaults {
     name: "linker_defaults",
+    defaults: ["shim_libs_defaults"],
     arch: {
         arm: {
             cflags: ["-D__work_around_b_24465209__"],
@@ -90,11 +91,6 @@ cc_defaults {
     product_variables: {
         debuggable: {
             cppflags: ["-DUSE_LD_CONFIG_FILE"],
-        },
-        statix: {
-            target_shim_libs: {
-                cppflags: ["-DLD_SHIM_LIBS=\"%s\""],
-            },
         },
     },
 
