@@ -33,7 +33,6 @@ cc_object {
         "-Wextra",
         "-Wno-unused",
         "-Werror",
-        "-O3",
     ],
 
     srcs: [
@@ -256,8 +255,6 @@ cc_defaults {
         "-Wl,-soname,ld-android.so",
     ],
 
-    cflags: ["-O3"],
-
     // we are going to link libc++_static manually because
     // when stl is not set to "none" build system adds libdl
     // to the list of static libraries which needs to be
@@ -404,7 +401,6 @@ cc_library {
         "-Wextra",
         "-Wunused",
         "-Werror",
-        "-O3",
     ],
     stl: "none",
 

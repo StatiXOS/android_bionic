@@ -17,7 +17,7 @@
 cc_defaults {
     name: "bionic-benchmarks-defaults",
     cflags: [
-        "-O3",
+        "-O2",
         "-fno-builtin",
         "-Wall",
         "-Wextra",
@@ -71,7 +71,6 @@ cc_defaults {
         "-Wextra",
         "-Werror",
         "-Wunused",
-        "-O3",
     ],
 }
 
