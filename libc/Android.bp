@@ -1762,8 +1762,8 @@ cc_library_headers {
 // libstdc++.so and libstdc++.a.
 // ========================================================
 
-cc_library {
-    name: "libstdc++",
+cc_defaults {
+    name: "libstdc++_defaults",
     defaults: [
         "libc_defaults",
         "bug_24465209_workaround",
@@ -1779,7 +1779,6 @@ cc_library {
     apex_available: [
         "//apex_available:platform",
     ],
-    vendor_available: true,
 
     static: {
         system_shared_libs: [],
@@ -1809,6 +1808,17 @@ cc_library {
             version_script: ":libstdc++.x86_64.map",
         },
     },
+}
+
+cc_library {
+    name: "libstdc++",
+    defaults: ["libstdc++_defaults"],
+}
+
+cc_library_shared {
+    name: "libstdc++_vendor",
+    defaults: ["libstdc++_defaults"],
+    vendor: true,
 }
 
 genrule {
