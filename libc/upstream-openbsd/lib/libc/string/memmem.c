@@ -159,6 +159,50 @@ twoway_memmem(const unsigned char *h, const unsigned char *z,
 	}
 }
 
+#define hash2(p) (((size_t)(p)[0] - ((size_t)(p)[-1] << 3)) % sizeof(shift))
+
+static char *
+horspool_memmem(const unsigned char *hs, size_t hs_len,
+                const unsigned char *ne, size_t ne_len)
+{
+	const unsigned char *end = hs + hs_len - ne_len;
+	uint8_t shift[256];
+	size_t tmp, shift1;
+	size_t m1 = ne_len - 1;
+	size_t offset = 0;
+
+	memset(shift, 0, sizeof(shift));
+	for (size_t i = 1; i < m1; i++)
+		shift[hash2(ne + i)] = i;
+	shift1 = m1 - shift[hash2(ne + m1)];
+	shift[hash2(ne + m1)] = m1;
+
+	for (; hs <= end; ) {
+		/* Skip past character pairs not in the needle. */
+		do {
+			hs += m1;
+			tmp = shift[hash2(hs)];
+		} while (tmp == 0 && hs <= end);
+
+		/* If match is not at the end of the needle, shift to the end */
+		hs -= tmp;
+		if (tmp < m1)
+			continue;
+
+		/* Hash of the last 2 characters matches. For longer needles,
+		   quickly filter out mismatches before doing a full comparison. */
+		if (m1 < 15 || memcmp(hs + offset, ne + offset, 8) == 0) {
+			if (memcmp(hs, ne, m1) == 0)
+				return (char *)hs;
+
+			offset = (offset >= 8 ? offset : m1) - 8;
+		}
+
+		hs += shift1;
+	}
+	return 0;
+}
+
 void *
 memmem(const void *h0, size_t k, const void *n0, size_t l)
 {
@@ -178,6 +222,10 @@ memmem(const void *h0, size_t k, const void *n0, size_t l)
 	if (l==2) return twobyte_memmem(h, k, n);
 	if (l==3) return threebyte_memmem(h, k, n);
 	if (l==4) return fourbyte_memmem(h, k, n);
+
+	/* Needles up to 256 bytes benefit significantly from 2-byte pair hashing */
+	if (l <= 256)
+		return horspool_memmem(h, k, n, l);
 
 	return twoway_memmem(h, h+k, n, l);
 }
