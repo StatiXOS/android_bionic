@@ -38,21 +38,9 @@
 /* NOTE: this implementation doesn't support a init function that throws a C++ exception
  *       or calls fork()
  */
-int pthread_once(pthread_once_t* once_control, void (*init_routine)(void)) {
-  static_assert(sizeof(atomic_int) == sizeof(pthread_once_t),
-                "pthread_once_t should actually be atomic_int in implementation.");
-
-  // We prefer casting to atomic_int instead of declaring pthread_once_t to be atomic_int directly.
-  // Because using the second method pollutes pthread.h, and causes an error when compiling libcxx.
-  atomic_int* once_control_ptr = reinterpret_cast<atomic_int*>(once_control);
-
-  // First check if the once is already initialized. This will be the common
-  // case and we want to make this as fast as possible. Note that this still
-  // requires a load_acquire operation here to ensure that all the
-  // stores performed by the initialization function are observable on
-  // this CPU after we exit.
-  int old_value = atomic_load_explicit(once_control_ptr, memory_order_acquire);
-
+static int __attribute__((noinline)) __pthread_once_slow(atomic_int* once_control_ptr,
+                                                         int old_value,
+                                                         void (*init_routine)(void)) {
   while (true) {
     if (__predict_true(old_value == ONCE_INITIALIZATION_COMPLETE)) {
       return 0;
@@ -82,6 +70,26 @@ int pthread_once(pthread_once_t* once_control, void (*init_routine)(void)) {
     __futex_wait_ex(once_control_ptr, 0, old_value, false, nullptr);
     old_value = atomic_load_explicit(once_control_ptr, memory_order_acquire);
   }
+}
+
+int pthread_once(pthread_once_t* once_control, void (*init_routine)(void)) {
+  static_assert(sizeof(atomic_int) == sizeof(pthread_once_t),
+                "pthread_once_t should actually be atomic_int in implementation.");
+
+  // We prefer casting to atomic_int instead of declaring pthread_once_t to be atomic_int directly.
+  // Because using the second method pollutes pthread.h, and causes an error when compiling libcxx.
+  atomic_int* once_control_ptr = reinterpret_cast<atomic_int*>(once_control);
+
+  // First check if the once is already initialized. This will be the common
+  // case and we want to make this as fast as possible. Note that this still
+  // requires a load_acquire operation here to ensure that all the
+  // stores performed by the initialization function are observable on
+  // this CPU after we exit.
+  int old_value = atomic_load_explicit(once_control_ptr, memory_order_acquire);
+  if (__predict_true(old_value == ONCE_INITIALIZATION_COMPLETE)) {
+    return 0;
+  }
+  return __pthread_once_slow(once_control_ptr, old_value, init_routine);
 }
 // call_once() became mandatory in <stdlib.h> in C23,
 // by which time we'd already offered it for API level >= 30 in <threads.h>.
