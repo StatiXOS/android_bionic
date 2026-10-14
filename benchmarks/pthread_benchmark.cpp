@@ -174,6 +174,19 @@ static void BM_pthread_rwlock_write(benchmark::State& state) {
 }
 BIONIC_BENCHMARK(BM_pthread_rwlock_write);
 
+static void BM_pthread_spinlock(benchmark::State& state) {
+  pthread_spinlock_t lock;
+  pthread_spin_init(&lock, PTHREAD_PROCESS_PRIVATE);
+
+  while (state.KeepRunning()) {
+    pthread_spin_lock(&lock);
+    pthread_spin_unlock(&lock);
+  }
+
+  pthread_spin_destroy(&lock);
+}
+BIONIC_BENCHMARK(BM_pthread_spinlock);
+
 static void* IdleThread(void*) {
   return nullptr;
 }
