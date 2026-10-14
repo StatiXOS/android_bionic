@@ -361,6 +361,33 @@ static void BM_string_strstr(benchmark::State& state) {
 }
 BIONIC_BENCHMARK_WITH_ARG(BM_string_strstr, "AT_ALIGNED_TWOBUF");
 
+static void BM_string_memmem(benchmark::State& state) {
+  const size_t nbytes = state.range(0);
+  const size_t haystack_alignment = state.range(1);
+  const size_t needle_alignment = state.range(2);
+
+  std::vector<char> haystack;
+  std::vector<char> needle;
+  char* haystack_aligned = GetAlignedPtrFilled(&haystack, haystack_alignment, nbytes, 'x');
+  size_t needle_len = std::min(nbytes, static_cast<size_t>(5));
+  char* needle_aligned = GetAlignedPtrFilled(&needle, needle_alignment, needle_len, 'x');
+
+  if (nbytes / 4 > 2) {
+    for (size_t i = 0; nbytes / 4 >= 2 && i < nbytes / 4 - 2; i++) {
+      haystack_aligned[4 * i + 3] = 'y';
+    }
+  }
+
+  while (state.KeepRunning()) {
+    if (memmem(haystack_aligned, nbytes, needle_aligned, needle_len) == nullptr) {
+      errx(1, "ERROR: memmem failed to find valid substring.");
+    }
+  }
+
+  state.SetBytesProcessed(uint64_t(state.iterations()) * uint64_t(nbytes));
+}
+BIONIC_BENCHMARK_WITH_ARG(BM_string_memmem, "AT_ALIGNED_TWOBUF");
+
 template <typename Fn>
   requires std::invocable<Fn, char*, int>
 void BenchStrChr(benchmark::State& state, Fn strchr_fn) {
