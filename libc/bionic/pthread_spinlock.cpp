@@ -66,8 +66,16 @@ int pthread_spin_trylock(pthread_spinlock_t* lock_interface) {
 int pthread_spin_lock(pthread_spinlock_t* lock_interface) {
   pthread_spinlock_internal_t* lock = __get_internal_spinlock(lock_interface);
   for (int i = 0; i < 10000; ++i) {
-    if (lock->lock.trylock()) {
+    if (__predict_true(lock->lock.trylock())) {
       return 0;
+    }
+    // Test-and-Test-and-Set: poll state using relaxed loads with CPU relax/yield
+    // to avoid saturating the memory bus with RFO (Read For Ownership) requests.
+    while (!lock->lock.is_unlocked()) {
+      bionic_cpu_relax();
+      if (++i >= 10000) {
+        break;
+      }
     }
   }
   lock->lock.lock();

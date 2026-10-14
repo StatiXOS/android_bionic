@@ -37,6 +37,23 @@
 #define BIONIC_STOP_UNWIND asm volatile(".cfi_undefined \%rip")
 #endif
 
+// Architecture-specific CPU relax / spin-pause hint.
+// Similar to glibc's atomic_spin_nop(). On ARM/ARM64, 'yield' hints the CPU core
+// to yield execution resources to another hardware thread/pipeline. On x86, 'pause'
+// prevents memory order pipeline replays and reduces power consumption. On RISC-V,
+// the pause hint instruction is used.
+static inline void bionic_cpu_relax() {
+#if defined(__arm__) || defined(__aarch64__)
+  __asm__ __volatile__("yield" ::: "memory");
+#elif defined(__i386__) || defined(__x86_64__)
+  __asm__ __volatile__("pause" ::: "memory");
+#elif defined(__riscv)
+  __asm__ __volatile__(".insn i 0x0f, 0, x0, x0, 0x010" ::: "memory");
+#else
+  __asm__ __volatile__("" ::: "memory");
+#endif
+}
+
 // The arraysize(arr) macro returns the # of elements in an array arr.
 // The expression is a compile-time constant, and therefore can be
 // used in defining new arrays, for example.  If you use arraysize on

@@ -52,6 +52,10 @@ class Lock {
     this->process_shared = process_shared;
   }
 
+  bool is_unlocked() const {
+    return atomic_load_explicit(&state, memory_order_relaxed) == Unlocked;
+  }
+
   bool trylock() {
     LockState old_state = Unlocked;
     return __predict_true(atomic_compare_exchange_strong_explicit(&state, &old_state,
