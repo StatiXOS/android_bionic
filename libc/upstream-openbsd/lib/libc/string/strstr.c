@@ -168,6 +168,53 @@ twoway_strstr(const unsigned char *h, const unsigned char *n)
 	}
 }
 
+#define hash2(p) (((size_t)(p)[0] - ((size_t)(p)[-1] << 3)) % sizeof(shift))
+
+static char *
+horspool_strstr(const unsigned char *hs, const unsigned char *ne, size_t ne_len)
+{
+	size_t hs_len = strlen((const char *)hs);
+	if (hs_len < ne_len) return 0;
+	if (memcmp(hs, ne, ne_len) == 0) return (char *)hs;
+
+	const unsigned char *end = hs + hs_len - ne_len;
+	uint8_t shift[256];
+	size_t tmp, shift1;
+	size_t m1 = ne_len - 1;
+	size_t offset = 0;
+
+	memset(shift, 0, sizeof(shift));
+	for (size_t i = 1; i < m1; i++)
+		shift[hash2(ne + i)] = i;
+	shift1 = m1 - shift[hash2(ne + m1)];
+	shift[hash2(ne + m1)] = m1;
+
+	for (; hs <= end; ) {
+		/* Skip past character pairs not in the needle. */
+		do {
+			hs += m1;
+			tmp = shift[hash2(hs)];
+		} while (tmp == 0 && hs <= end);
+
+		/* If match is not at the end of the needle, shift to the end */
+		hs -= tmp;
+		if (tmp < m1)
+			continue;
+
+		/* Hash of the last 2 characters matches. For longer needles,
+		   quickly filter out mismatches before doing a full comparison. */
+		if (m1 < 15 || memcmp(hs + offset, ne + offset, 8) == 0) {
+			if (memcmp(hs, ne, m1) == 0)
+				return (char *)hs;
+
+			offset = (offset >= 8 ? offset : m1) - 8;
+		}
+
+		hs += shift1;
+	}
+	return 0;
+}
+
 char *
 strstr(const char *h, const char *n)
 {
@@ -183,6 +230,10 @@ strstr(const char *h, const char *n)
 	if (!n[3]) return threebyte_strstr((void *)h, (void *)n);
 	if (!h[3]) return 0;
 	if (!n[4]) return fourbyte_strstr((void *)h, (void *)n);
+
+	size_t n_len = strlen(n);
+	if (n_len <= 256)
+		return horspool_strstr((const unsigned char *)h, (const unsigned char *)n, n_len);
 
 	return twoway_strstr((void *)h, (void *)n);
 }
