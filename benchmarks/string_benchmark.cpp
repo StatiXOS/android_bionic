@@ -332,7 +332,7 @@ static void BM_string_strncmp(benchmark::State& state) {
 }
 BIONIC_BENCHMARK_WITH_ARG(BM_string_strncmp, "AT_ALIGNED_TWOBUF");
 
-static void BM_string_strstr(benchmark::State& state) {
+static void BM_string_memmem(benchmark::State& state) {
   const size_t nbytes = state.range(0);
   const size_t haystack_alignment = state.range(1);
   const size_t needle_alignment = state.range(2);
@@ -340,26 +340,24 @@ static void BM_string_strstr(benchmark::State& state) {
   std::vector<char> haystack;
   std::vector<char> needle;
   char* haystack_aligned = GetAlignedPtrFilled(&haystack, haystack_alignment, nbytes, 'x');
-  char* needle_aligned = GetAlignedPtrFilled(&needle, needle_alignment,
-                                             std::min(nbytes, static_cast<size_t>(5)), 'x');
+  size_t needle_len = std::min(nbytes, static_cast<size_t>(5));
+  char* needle_aligned = GetAlignedPtrFilled(&needle, needle_alignment, needle_len, 'x');
 
   if (nbytes / 4 > 2) {
     for (size_t i = 0; nbytes / 4 >= 2 && i < nbytes / 4 - 2; i++) {
       haystack_aligned[4 * i + 3] = 'y';
     }
   }
-  haystack_aligned[nbytes - 1] = '\0';
-  needle_aligned[needle.size() - 1] = '\0';
 
   while (state.KeepRunning()) {
-    if (strstr(haystack_aligned, needle_aligned) == nullptr) {
-      errx(1, "ERROR: strstr failed to find valid substring.");
+    if (memmem(haystack_aligned, nbytes, needle_aligned, needle_len) == nullptr) {
+      errx(1, "ERROR: memmem failed to find valid substring.");
     }
   }
 
   state.SetBytesProcessed(uint64_t(state.iterations()) * uint64_t(nbytes));
 }
-BIONIC_BENCHMARK_WITH_ARG(BM_string_strstr, "AT_ALIGNED_TWOBUF");
+BIONIC_BENCHMARK_WITH_ARG(BM_string_memmem, "AT_ALIGNED_TWOBUF");
 
 template <typename Fn>
   requires std::invocable<Fn, char*, int>
