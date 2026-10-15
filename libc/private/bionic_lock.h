@@ -68,8 +68,26 @@ class Lock {
                          LockedWithoutWaiter, memory_order_acquire, memory_order_relaxed))) {
       return;
     }
+
+    // Bounded adaptive spin before sleeping: critical sections protected by Lock are brief
+    // (e.g. rwlock metadata, dynamic linker, system properties context node).
+    // Spinning briefly with CPU relax avoids costly kernel context switches and futex overhead
+    // under light to moderate contention, while promptly bailing out if the lock remains busy.
+    constexpr int kSpinTries = 40;
+    for (int i = 0; i < kSpinTries; ++i) {
+      if (is_unlocked()) {
+        old_state = Unlocked;
+        if (atomic_compare_exchange_weak_explicit(&state, &old_state,
+                                                 LockedWithoutWaiter,
+                                                 memory_order_acquire,
+                                                 memory_order_relaxed)) {
+          return;
+        }
+      }
+      bionic_cpu_relax();
+    }
+
     while (atomic_exchange_explicit(&state, LockedWithWaiter, memory_order_acquire) != Unlocked) {
-      // TODO: As the critical section is brief, it is a better choice to spin a few times befor sleeping.
       __futex_wait_ex(&state, process_shared, LockedWithWaiter);
     }
     return;
